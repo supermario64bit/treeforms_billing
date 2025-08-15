@@ -27,6 +27,9 @@ func Get() *gorm.DB {
 }
 
 func Automigrate() {
+	if db == nil {
+		Get()
+	}
 	db.AutoMigrate(
 		models.User{},
 	)
