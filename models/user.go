@@ -1,8 +1,6 @@
 package models
 
 import (
-	"treeforms_billing/logger"
-
 	"gorm.io/gorm"
 )
 
@@ -17,9 +15,5 @@ type User struct {
 
 func (u *User) ValidateFields() error {
 	err := validate.Struct(u)
-	if err != nil {
-		logger.Info("Validation failed for user")
-	}
-
 	return err
 }
