@@ -2,6 +2,8 @@ package main
 
 import (
 	"net/http"
+	"os"
+	"treeforms_billing/db"
 	"treeforms_billing/logger"
 
 	"github.com/gin-gonic/gin"
@@ -16,7 +18,17 @@ func main() {
 		return
 	}
 
+	// Automigrate DB
+	db.Automigrate()
+
 	r := gin.Default()
+
+	if os.Getenv("ENV") == "production" {
+		gin.SetMode(gin.ReleaseMode)
+		logger.Info("Running in release mode")
+	} else {
+		logger.Info("Running in development mode")
+	}
 
 	r.GET("/hello", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "Hello World!"})
