@@ -40,3 +40,21 @@ func (ctlr *userController) Create(c *gin.Context) {
 
 	c.JSON(http.StatusBadRequest, gin.H{"status": "success", "message": "User Created", "result": gin.H{"user": user}})
 }
+
+func (ctrl *userController) Find(c *gin.Context) {
+	filter := &models.UserFilter{}
+	err := c.ShouldBindBodyWithJSON(filter)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "failed", "message": "Invalid Request Body", "result": gin.H{"error": err.Error()}})
+		return
+	}
+
+	users, appErr := ctrl.svc.Find(*filter)
+	if appErr != nil {
+		appErr.WriteHTTPResponse(c)
+		return
+	}
+
+	c.JSON(http.StatusBadRequest, gin.H{"status": "success", "message": "User Created", "result": gin.H{"users": users}})
+
+}
