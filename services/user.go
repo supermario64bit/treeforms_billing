@@ -3,6 +3,7 @@ package services
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"treeforms_billing/application_types"
 	"treeforms_billing/db"
@@ -104,4 +105,46 @@ func (svc *userService) FindByID(id uint) (*models.User, *application_types.Appl
 
 	logger.Success("User found by id!")
 	return user, nil
+}
+
+func (svc *userService) UpdateByID(id uint, updatedUserData *models.User) (*models.User, *application_types.ApplicationError) {
+	logger.Info("Started updated user by id " + strconv.FormatUint(uint64(id), 10))
+	updatedUser, appErr := svc.FindByID(id)
+	if appErr != nil {
+		return nil, appErr
+	}
+
+	if strings.TrimSpace(updatedUserData.Name) != "" {
+		logger.Info("User name changed")
+		updatedUser.Name = updatedUserData.Name
+	}
+
+	if strings.TrimSpace(updatedUserData.Email) != "" {
+		logger.Info("User email changed")
+		updatedUser.Email = updatedUserData.Email
+	}
+
+	if strings.TrimSpace(updatedUserData.Phone) != "" {
+		logger.Info("User phone changed")
+		updatedUser.Phone = updatedUserData.Phone
+	}
+
+	if strings.TrimSpace(updatedUserData.Role) != "" {
+		logger.Info("User role changed")
+		updatedUser.Role = updatedUserData.Role
+	}
+
+	if strings.TrimSpace(updatedUserData.Status) != "" {
+		logger.Info("User status changed")
+		updatedUser.Status = updatedUserData.Status
+	}
+
+	if err := svc.db.Save(updatedUser).Error; err != nil {
+		appErr = application_types.NewApplicationError(false, http.StatusInternalServerError, fmt.Errorf("Error occured while updating user. Message: "+err.Error()))
+		logger.Danger(appErr.GetErrorMessage())
+		return nil, appErr
+	}
+
+	logger.Success("User updated by id " + strconv.FormatUint(uint64(id), 10))
+	return updatedUser, nil
 }
