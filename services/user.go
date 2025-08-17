@@ -21,6 +21,7 @@ type UserService interface {
 	Create(user models.User) (*models.User, *application_types.ApplicationError)
 	Find(filter models.UserFilter) ([]*models.User, *application_types.ApplicationError)
 	FindByID(id uint) (*models.User, *application_types.ApplicationError)
+	UpdateByID(id uint, updatedUserData *models.User) (*models.User, *application_types.ApplicationError)
 }
 
 func NewUserService() UserService {
