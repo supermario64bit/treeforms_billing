@@ -7,6 +7,7 @@ import (
 	"strings"
 	"treeforms_billing/application_types"
 	"treeforms_billing/db"
+	"treeforms_billing/dtos"
 	"treeforms_billing/logger"
 	"treeforms_billing/models"
 
@@ -18,10 +19,10 @@ type userService struct {
 }
 
 type UserService interface {
-	Create(user *models.User) (*models.User, *application_types.ApplicationError)
+	Create(user *dtos.UserDTO) (*models.User, *application_types.ApplicationError)
 	Find(filter models.UserFilter) ([]*models.User, *application_types.ApplicationError)
 	FindByID(id uint) (*models.User, *application_types.ApplicationError)
-	UpdateByID(id uint, updatedUserData *models.User) (*models.User, *application_types.ApplicationError)
+	UpdateByID(id uint, updatedUserData *dtos.UserDTO) (*models.User, *application_types.ApplicationError)
 	DeleteByID(id uint) *application_types.ApplicationError
 }
 
@@ -31,9 +32,14 @@ func NewUserService() UserService {
 	}
 }
 
-func (svc *userService) Create(user *models.User) (*models.User, *application_types.ApplicationError) {
+func (svc *userService) Create(userDTO *dtos.UserDTO) (*models.User, *application_types.ApplicationError) {
 	logger.Info("Creating a new user.")
+	// Data transfering from DTO to model
+	user := &models.User{Name: userDTO.Name, Email: userDTO.Email, Phone: userDTO.Phone,
+		Role: userDTO.Role, Status: userDTO.Status}
+
 	// Validation checks
+	logger.Info("Validating new user fields.")
 	err := user.ValidateFields()
 	if err != nil {
 		appErr := application_types.NewApplicationError(false, http.StatusBadRequest,
@@ -112,7 +118,7 @@ func (svc *userService) FindByID(id uint) (*models.User, *application_types.Appl
 	return user, nil
 }
 
-func (svc *userService) UpdateByID(id uint, updatedUserData *models.User) (*models.User, *application_types.ApplicationError) {
+func (svc *userService) UpdateByID(id uint, updatedUserData *dtos.UserDTO) (*models.User, *application_types.ApplicationError) {
 	logger.Info("Started updated user by id " + strconv.FormatUint(uint64(id), 10))
 	updatedUser, appErr := svc.FindByID(id)
 	if appErr != nil {
