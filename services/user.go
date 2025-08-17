@@ -19,6 +19,7 @@ type userService struct {
 type UserService interface {
 	Create(user models.User) (*models.User, *application_types.ApplicationError)
 	Find(filter models.UserFilter) ([]*models.User, *application_types.ApplicationError)
+	FindByID(id uint) (*models.User, *application_types.ApplicationError)
 }
 
 func NewUserService() UserService {
@@ -86,9 +87,21 @@ func (svc *userService) Find(filter models.UserFilter) ([]*models.User, *applica
 
 	if err := query.Find(&users).Error; err != nil {
 		logger.Danger("Unable to find users. Message: " + err.Error())
-		return nil, application_types.NewApplicationError(false, http.StatusInternalServerError, err)
+		return nil, application_types.NewApplicationError(false, http.StatusInternalServerError, fmt.Errorf("Unable to find users. Message: "+err.Error()))
 	}
 
 	logger.Success("Users found successfully")
 	return users, nil
+}
+
+func (svc *userService) FindByID(id uint) (*models.User, *application_types.ApplicationError) {
+	var user *models.User
+
+	if err := svc.db.First(user, id).Error; err != nil {
+		logger.Danger("Unable to find user by id. Message: " + err.Error())
+		return nil, application_types.NewApplicationError(false, http.StatusInternalServerError, fmt.Errorf("Unable to find user by id. Message: "+err.Error()))
+	}
+
+	logger.Success("User found by id!")
+	return user, nil
 }
