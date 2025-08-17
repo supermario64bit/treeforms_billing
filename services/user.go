@@ -143,6 +143,12 @@ func (svc *userService) UpdateByID(id uint, updatedUserData *models.User) (*mode
 		updatedUser.Status = updatedUserData.Status
 	}
 
+	if err := updatedUser.ValidateFields(); err != nil {
+		appErr = application_types.NewApplicationError(false, http.StatusBadRequest, fmt.Errorf("Validation failed. Message: "+err.Error()))
+		logger.Danger(appErr.GetErrorMessage())
+		return nil, appErr
+	}
+
 	if err := svc.db.Save(updatedUser).Error; err != nil {
 		appErr = application_types.NewApplicationError(false, http.StatusInternalServerError, fmt.Errorf("Error occured while updating user. Message: "+err.Error()))
 		logger.Danger(appErr.GetErrorMessage())
