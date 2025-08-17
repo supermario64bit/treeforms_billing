@@ -178,6 +178,28 @@ func (svc *userService) UpdateByID(id uint, updatedUserData *dtos.UserDTO) (*mod
 		return nil, appErr
 	}
 
+	logger.Info("Checking given email is enrolled by any other user")
+	userByEmail, appErr := svc.FindByEmail(updatedUser.Email)
+	if appErr != nil {
+		logger.Danger("Error occured while checking the user email enrolled by any other user")
+		return nil, appErr
+	}
+	if userByEmail != nil {
+		logger.Warning("Given email already in use")
+		return nil, application_types.NewApplicationError(false, http.StatusUnprocessableEntity, fmt.Errorf("Email already in use."))
+	}
+
+	logger.Info("Checking given phone is enrolled by any other user")
+	userByPhone, appErr := svc.FindByPhone(updatedUser.Phone)
+	if appErr != nil {
+		logger.Danger("Error occured while checking the user phone enrolled by any other user")
+		return nil, appErr
+	}
+	if userByPhone != nil {
+		logger.Warning("Given phone already in use")
+		return nil, application_types.NewApplicationError(false, http.StatusUnprocessableEntity, fmt.Errorf("Email already in use."))
+	}
+
 	if err := svc.db.Save(updatedUser).Error; err != nil {
 		appErr = application_types.NewApplicationError(false, http.StatusInternalServerError, fmt.Errorf("Error occured while updating user. Message: "+err.Error()))
 		logger.Danger(appErr.GetErrorMessage())
