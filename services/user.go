@@ -50,7 +50,27 @@ func (svc *userService) Create(userDTO *dtos.UserDTO) (*models.User, *applicatio
 		return nil, appErr
 	}
 
-	// TODO -> Check email and mobile already exist
+	logger.Info("Checking given email is enrolled by any other user")
+	userByEmail, appErr := svc.FindByEmail(user.Email)
+	if appErr != nil {
+		logger.Danger("Error occured while checking the user email enrolled by any other user")
+		return nil, appErr
+	}
+	if userByEmail != nil {
+		logger.Warning("Given email already in use")
+		return nil, application_types.NewApplicationError(false, http.StatusUnprocessableEntity, fmt.Errorf("Email already in use."))
+	}
+
+	logger.Info("Checking given phone is enrolled by any other user")
+	userByPhone, appErr := svc.FindByPhone(user.Phone)
+	if appErr != nil {
+		logger.Danger("Error occured while checking the user phone enrolled by any other user")
+		return nil, appErr
+	}
+	if userByPhone != nil {
+		logger.Warning("Given phone already in use")
+		return nil, application_types.NewApplicationError(false, http.StatusUnprocessableEntity, fmt.Errorf("Email already in use."))
+	}
 
 	// Creating the user
 	tx := svc.db.Create(&user)
