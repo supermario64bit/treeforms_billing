@@ -119,3 +119,25 @@ func (ctrl *userController) UpdateByID(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "User Updated", "result": gin.H{"user": updateUser}})
 	logger.Info("Update user by id api finished")
 }
+
+func (ctrl *userController) DeleteByID(c *gin.Context) {
+	idStr := c.Param("id")
+	logger.Info("API Request for deleting a user by ID " + idStr + ".")
+
+	id, err := strconv.ParseUint(idStr, 10, 0)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "failed", "message": "Invalid User ID", "result": gin.H{"error": err.Error()}})
+		logger.Info("Delete user by id api stopped")
+		return
+	}
+
+	appErr := ctrl.svc.DeleteByID(uint(id))
+	if appErr != nil {
+		appErr.WriteHTTPResponse(c)
+		logger.Info("Delete user by id api stopped")
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "User Deleted"})
+	logger.Info("Delete user by id api finished")
+}
