@@ -8,6 +8,8 @@ const (
 	green  = "\033[32m"
 	yellow = "\033[33m"
 	blue   = "\033[34m"
+
+	redBgWhiteText = "\033[37;41m"
 )
 
 func Success(msg string) {
@@ -24,4 +26,8 @@ func Warning(msg string) {
 
 func Info(msg string) {
 	log.Println(blue + "! " + msg + reset)
+}
+
+func HighlightedDanger(msg string) {
+	log.Println(redBgWhiteText + "! " + msg + reset)
 }
