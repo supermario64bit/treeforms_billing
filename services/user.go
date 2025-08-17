@@ -22,6 +22,7 @@ type UserService interface {
 	Find(filter models.UserFilter) ([]*models.User, *application_types.ApplicationError)
 	FindByID(id uint) (*models.User, *application_types.ApplicationError)
 	UpdateByID(id uint, updatedUserData *models.User) (*models.User, *application_types.ApplicationError)
+	DeleteByID(id uint) *application_types.ApplicationError
 }
 
 func NewUserService() UserService {
@@ -157,4 +158,22 @@ func (svc *userService) UpdateByID(id uint, updatedUserData *models.User) (*mode
 
 	logger.Success("User updated by id " + strconv.FormatUint(uint64(id), 10))
 	return updatedUser, nil
+}
+
+func (svc *userService) DeleteByID(id uint) *application_types.ApplicationError {
+	logger.Info("Deleting a user with id " + strconv.FormatUint(uint64(id), 10))
+
+	user, appErr := svc.FindByID(id)
+	if appErr != nil {
+		return appErr
+	}
+
+	if err := svc.db.Delete(user).Error; err != nil {
+		appErr = application_types.NewApplicationError(false, http.StatusInternalServerError, fmt.Errorf("Unable to delete user if id"+strconv.FormatUint(uint64(id), 10)+". Message: "+err.Error()))
+		logger.Danger(appErr.GetErrorMessage())
+		return appErr
+	}
+
+	logger.Success("Deleted user with id " + strconv.FormatUint(uint64(id), 10))
+	return nil
 }
