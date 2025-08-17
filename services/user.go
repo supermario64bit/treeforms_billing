@@ -24,6 +24,8 @@ type UserService interface {
 	FindByID(id uint) (*models.User, *application_types.ApplicationError)
 	UpdateByID(id uint, updatedUserData *dtos.UserDTO) (*models.User, *application_types.ApplicationError)
 	DeleteByID(id uint) *application_types.ApplicationError
+	FindByEmail(email string) (*models.User, *application_types.ApplicationError)
+	FindByPhone(phone string) (*models.User, *application_types.ApplicationError)
 }
 
 func NewUserService() UserService {
@@ -182,4 +184,30 @@ func (svc *userService) DeleteByID(id uint) *application_types.ApplicationError 
 
 	logger.Success("Deleted user with id " + strconv.FormatUint(uint64(id), 10))
 	return nil
+}
+
+func (svc *userService) FindByEmail(email string) (*models.User, *application_types.ApplicationError) {
+	logger.Info("Finding a user with email id " + email)
+
+	var user *models.User
+	if err := svc.db.Where("email = ?", email).First(user).Error; err != nil {
+		logger.Danger("Unable to find user by email. Message: " + err.Error())
+		return nil, application_types.NewApplicationError(false, http.StatusInternalServerError, fmt.Errorf("Unable to find user by email. Message: "+err.Error()))
+	}
+
+	logger.Success("User found by email")
+	return user, nil
+}
+
+func (svc *userService) FindByPhone(phone string) (*models.User, *application_types.ApplicationError) {
+	logger.Info("Finding a user with phone " + phone)
+
+	var user *models.User
+	if err := svc.db.Where("phone = ?", phone).First(user).Error; err != nil {
+		logger.Danger("Unable to find user by phone. Message: " + err.Error())
+		return nil, application_types.NewApplicationError(false, http.StatusInternalServerError, fmt.Errorf("Unable to find user by phone. Message: "+err.Error()))
+	}
+
+	logger.Success("User found by phone")
+	return user, nil
 }
