@@ -1,10 +1,10 @@
 package main
 
 import (
-	"net/http"
 	"os"
 	"treeforms_billing/db"
 	"treeforms_billing/logger"
+	"treeforms_billing/routes"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -30,9 +30,7 @@ func main() {
 		logger.Info("Running in development mode")
 	}
 
-	r.GET("/hello", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "Hello World!"})
-	})
+	routes.MountHTTPRoutes(r)
 
 	r.Run()
 }
