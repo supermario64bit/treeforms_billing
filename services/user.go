@@ -18,7 +18,7 @@ type userService struct {
 }
 
 type UserService interface {
-	Create(user models.User) (*models.User, *application_types.ApplicationError)
+	Create(user *models.User) (*models.User, *application_types.ApplicationError)
 	Find(filter models.UserFilter) ([]*models.User, *application_types.ApplicationError)
 	FindByID(id uint) (*models.User, *application_types.ApplicationError)
 	UpdateByID(id uint, updatedUserData *models.User) (*models.User, *application_types.ApplicationError)
@@ -31,7 +31,7 @@ func NewUserService() UserService {
 	}
 }
 
-func (svc *userService) Create(user models.User) (*models.User, *application_types.ApplicationError) {
+func (svc *userService) Create(user *models.User) (*models.User, *application_types.ApplicationError) {
 	logger.Info("Creating a new user.")
 	// Validation checks
 	err := user.ValidateFields()
@@ -54,7 +54,7 @@ func (svc *userService) Create(user models.User) (*models.User, *application_typ
 	}
 
 	logger.Success("User created succesfully.")
-	return &user, nil
+	return user, nil
 }
 
 func (svc *userService) Find(filter models.UserFilter) ([]*models.User, *application_types.ApplicationError) {
