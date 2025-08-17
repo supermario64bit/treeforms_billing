@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	"strconv"
 	"treeforms_billing/dtos"
 	"treeforms_billing/logger"
 	"treeforms_billing/models"
@@ -42,7 +43,7 @@ func (ctlr *userController) Create(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusBadRequest, gin.H{"status": "success", "message": "User Created", "result": gin.H{"user": user}})
+	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "User Created", "result": gin.H{"user": user}})
 	logger.Info("Create user api finished")
 
 }
@@ -64,6 +65,28 @@ func (ctrl *userController) Find(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusBadRequest, gin.H{"status": "success", "message": "User Created", "result": gin.H{"users": users}})
+	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Users found", "result": gin.H{"users": users}})
 	logger.Info("Find users api finished")
+}
+
+func (ctrl *userController) FindByID(c *gin.Context) {
+	idStr := c.Param("id")
+	logger.Info("API Request for finding user by id " + idStr + ".")
+
+	id, err := strconv.ParseUint(idStr, 10, 0)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "failed", "message": "Invalid User ID", "result": gin.H{"error": err.Error()}})
+		logger.Info("Find userby id api stopped")
+		return
+	}
+
+	user, appErr := ctrl.svc.FindByID(uint(id))
+	if appErr != nil {
+		appErr.WriteHTTPResponse(c)
+		logger.Info("Find user by id api stopped")
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "User Found", "result": gin.H{"user": user}})
+	logger.Info("Find user by id api finished")
 }
