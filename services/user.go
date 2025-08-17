@@ -31,6 +31,7 @@ func NewUserService() UserService {
 }
 
 func (svc *userService) Create(user models.User) (*models.User, *application_types.ApplicationError) {
+	logger.Info("Creating a new user.")
 	// Validation checks
 	err := user.ValidateFields()
 	if err != nil {
@@ -51,38 +52,40 @@ func (svc *userService) Create(user models.User) (*models.User, *application_typ
 		return nil, appErr
 	}
 
+	logger.Success("User created succesfully.")
 	return &user, nil
 }
 
 func (svc *userService) Find(filter models.UserFilter) ([]*models.User, *application_types.ApplicationError) {
+	logger.Info("Finding users")
 	var users []*models.User
 	query := svc.db
 
 	if strings.TrimSpace(filter.Name) != "" {
-		logger.Info("Added Name to the user find query")
+		logger.Info("Added Name filter to the user find query")
 		query = query.Where("name LIKE ?", "%"+strings.TrimSpace(filter.Name)+"%")
 	}
 
 	if strings.TrimSpace(filter.Email) != "" {
-		logger.Info("Added Email to the user find query")
+		logger.Info("Added Email filter to the user find query")
 		query = query.Where("email LIKE ?", "%"+strings.TrimSpace(filter.Email)+"%")
 
 	}
 
 	if strings.TrimSpace(filter.Phone) != "" {
-		logger.Info("Added Phone to the user find query")
+		logger.Info("Added Phone filter to the user find query")
 		query = query.Where("phone LIKE ?", "%"+strings.TrimSpace(filter.Phone)+"%")
 
 	}
 
 	if strings.TrimSpace(filter.Role) != "" {
-		logger.Info("Added Role to the user find query")
+		logger.Info("Added Role filter to the user find query")
 		query = query.Where("role LIKE ?", "%"+strings.TrimSpace(filter.Role)+"%")
 
 	}
 
 	if strings.TrimSpace(filter.Status) != "" {
-		logger.Info("Added Status to the user find query")
+		logger.Info("Added Status filter to the user find query")
 		query = query.Where("status LIKE ?", "%"+strings.TrimSpace(filter.Status)+"%")
 
 	}
