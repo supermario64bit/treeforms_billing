@@ -31,7 +31,7 @@ func NewUserController() UserController {
 
 func (ctlr *userController) Create(c *gin.Context) {
 	logger.Info("API Request for creating a user.")
-	var userDTO *dtos.UserDTO
+	userDTO := &dtos.UserDTO{}
 	err := c.ShouldBindBodyWithJSON(userDTO)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "failed", "message": "Invalid Request Body", "result": gin.H{"error": err.Error()}})
@@ -98,7 +98,7 @@ func (ctrl *userController) UpdateByID(c *gin.Context) {
 	idStr := c.Param("id")
 	logger.Info("API Request for updating a user by ID " + idStr + ".")
 
-	var userDTO *dtos.UserDTO
+	userDTO := &dtos.UserDTO{}
 	err := c.ShouldBindBodyWithJSON(userDTO)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "failed", "message": "Invalid Request Body", "result": gin.H{"error": err.Error()}})

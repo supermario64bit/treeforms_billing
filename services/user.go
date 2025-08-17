@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -44,38 +45,34 @@ func (svc *userService) Create(userDTO *dtos.UserDTO) (*models.User, *applicatio
 	logger.Info("Validating new user fields.")
 	err := user.ValidateFields()
 	if err != nil {
-		appErr := application_types.NewApplicationError(false, http.StatusBadRequest,
+		appErr := application_types.NewApplicationError(false, http.StatusBadRequest, "Invalid request",
 			fmt.Errorf("Validation failed for creating the user. Message: "+err.Error()))
 		logger.Warning(appErr.GetErrorMessage())
 		return nil, appErr
 	}
 
 	logger.Info("Checking given email is enrolled by any other user")
-	userByEmail, appErr := svc.FindByEmail(user.Email)
-	if appErr != nil {
+	if err := svc.db.Where("email =?", user.Email).First(&models.User{}).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		logger.Danger("Error occured while checking the user email enrolled by any other user")
-		return nil, appErr
-	}
-	if userByEmail != nil {
-		logger.Warning("Given email already in use")
-		return nil, application_types.NewApplicationError(false, http.StatusUnprocessableEntity, fmt.Errorf("Email already in use."))
+		return nil, application_types.NewApplicationError(false, http.StatusUnprocessableEntity, "User update failed", fmt.Errorf("Unable to find user by email. Message: "+err.Error()))
+	} else if err == nil {
+		logger.Warning("Given email id already in use")
+		return nil, application_types.NewApplicationError(false, http.StatusUnprocessableEntity, "User update failed", fmt.Errorf("Email ID is already registered with another user"))
 	}
 
 	logger.Info("Checking given phone is enrolled by any other user")
-	userByPhone, appErr := svc.FindByPhone(user.Phone)
-	if appErr != nil {
+	if err := svc.db.Where("phone =?", user.Phone).First(&models.User{}).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		logger.Danger("Error occured while checking the user phone enrolled by any other user")
-		return nil, appErr
-	}
-	if userByPhone != nil {
+		return nil, application_types.NewApplicationError(false, http.StatusUnprocessableEntity, "User update failed", fmt.Errorf("Unable to find user by phone. Message: "+err.Error()))
+	} else if err == nil {
 		logger.Warning("Given phone already in use")
-		return nil, application_types.NewApplicationError(false, http.StatusUnprocessableEntity, fmt.Errorf("Email already in use."))
+		return nil, application_types.NewApplicationError(false, http.StatusUnprocessableEntity, "User update failed", fmt.Errorf("Phone number is already registered with another user"))
 	}
 
 	// Creating the user
 	tx := svc.db.Create(&user)
 	if tx.Error != nil {
-		appErr := application_types.NewApplicationError(false, http.StatusInternalServerError,
+		appErr := application_types.NewApplicationError(false, http.StatusInternalServerError, "User creation failed",
 			fmt.Errorf("User creation failed. Message: "+err.Error()))
 		logger.Danger(appErr.GetErrorMessage())
 		return nil, appErr
@@ -121,7 +118,8 @@ func (svc *userService) Find(filter models.UserFilter) ([]*models.User, *applica
 
 	if err := query.Find(&users).Error; err != nil {
 		logger.Danger("Unable to find users. Message: " + err.Error())
-		return nil, application_types.NewApplicationError(false, http.StatusInternalServerError, fmt.Errorf("Unable to find users. Message: "+err.Error()))
+		return nil, application_types.NewApplicationError(false, http.StatusInternalServerError, "User find failed!",
+			fmt.Errorf("Unable to find users. Message: "+err.Error()))
 	}
 
 	logger.Success("Users found successfully")
@@ -129,11 +127,17 @@ func (svc *userService) Find(filter models.UserFilter) ([]*models.User, *applica
 }
 
 func (svc *userService) FindByID(id uint) (*models.User, *application_types.ApplicationError) {
-	var user *models.User
+	user := &models.User{}
 
 	if err := svc.db.First(user, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			logger.Danger("No user found for the id " + strconv.FormatUint(uint64(id), 10))
+			return nil, application_types.NewApplicationError(false, http.StatusNotFound, "No user found", fmt.Errorf("No user found for the given id"))
+
+		}
 		logger.Danger("Unable to find user by id. Message: " + err.Error())
-		return nil, application_types.NewApplicationError(false, http.StatusInternalServerError, fmt.Errorf("Unable to find user by id. Message: "+err.Error()))
+		return nil, application_types.NewApplicationError(false, http.StatusInternalServerError, "Unable to find user with id",
+			fmt.Errorf("Unable to find user by id. Message: "+err.Error()))
 	}
 
 	logger.Success("User found by id!")
@@ -173,35 +177,32 @@ func (svc *userService) UpdateByID(id uint, updatedUserData *dtos.UserDTO) (*mod
 	}
 
 	if err := updatedUser.ValidateFields(); err != nil {
-		appErr = application_types.NewApplicationError(false, http.StatusBadRequest, fmt.Errorf("Validation failed. Message: "+err.Error()))
+		appErr = application_types.NewApplicationError(false, http.StatusBadRequest, "User update failed",
+			fmt.Errorf("Validation failed. Message: "+err.Error()))
 		logger.Danger(appErr.GetErrorMessage())
 		return nil, appErr
 	}
-
 	logger.Info("Checking given email is enrolled by any other user")
-	userByEmail, appErr := svc.FindByEmail(updatedUser.Email)
-	if appErr != nil {
+	if err := svc.db.Where("email =?", updatedUser.Email).First(&models.User{}).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		logger.Danger("Error occured while checking the user email enrolled by any other user")
-		return nil, appErr
-	}
-	if userByEmail != nil {
-		logger.Warning("Given email already in use")
-		return nil, application_types.NewApplicationError(false, http.StatusUnprocessableEntity, fmt.Errorf("Email already in use."))
+		return nil, application_types.NewApplicationError(false, http.StatusUnprocessableEntity, "User update failed", fmt.Errorf("Unable to find user by email. Message: "+err.Error()))
+	} else if err == nil {
+		logger.Warning("Given email id already in use")
+		return nil, application_types.NewApplicationError(false, http.StatusUnprocessableEntity, "User update failed", fmt.Errorf("Email ID is already registered with another user"))
 	}
 
 	logger.Info("Checking given phone is enrolled by any other user")
-	userByPhone, appErr := svc.FindByPhone(updatedUser.Phone)
-	if appErr != nil {
+	if err := svc.db.Where("phone =?", updatedUser.Phone).First(&models.User{}).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		logger.Danger("Error occured while checking the user phone enrolled by any other user")
-		return nil, appErr
-	}
-	if userByPhone != nil {
+		return nil, application_types.NewApplicationError(false, http.StatusUnprocessableEntity, "User update failed", fmt.Errorf("Unable to find user by phone. Message: "+err.Error()))
+	} else if err == nil {
 		logger.Warning("Given phone already in use")
-		return nil, application_types.NewApplicationError(false, http.StatusUnprocessableEntity, fmt.Errorf("Email already in use."))
+		return nil, application_types.NewApplicationError(false, http.StatusUnprocessableEntity, "User update failed", fmt.Errorf("Phone number is already registered with another user"))
 	}
 
 	if err := svc.db.Save(updatedUser).Error; err != nil {
-		appErr = application_types.NewApplicationError(false, http.StatusInternalServerError, fmt.Errorf("Error occured while updating user. Message: "+err.Error()))
+		appErr = application_types.NewApplicationError(false, http.StatusInternalServerError, "User update failed.",
+			fmt.Errorf("Error occured while updating user. Message: "+err.Error()))
 		logger.Danger(appErr.GetErrorMessage())
 		return nil, appErr
 	}
@@ -219,7 +220,8 @@ func (svc *userService) DeleteByID(id uint) *application_types.ApplicationError 
 	}
 
 	if err := svc.db.Delete(user).Error; err != nil {
-		appErr = application_types.NewApplicationError(false, http.StatusInternalServerError, fmt.Errorf("Unable to delete user if id"+strconv.FormatUint(uint64(id), 10)+". Message: "+err.Error()))
+		appErr = application_types.NewApplicationError(false, http.StatusInternalServerError, "User delete failed.",
+			fmt.Errorf("Unable to delete user if id"+strconv.FormatUint(uint64(id), 10)+". Message: "+err.Error()))
 		logger.Danger(appErr.GetErrorMessage())
 		return appErr
 	}
@@ -231,25 +233,35 @@ func (svc *userService) DeleteByID(id uint) *application_types.ApplicationError 
 func (svc *userService) FindByEmail(email string) (*models.User, *application_types.ApplicationError) {
 	logger.Info("Finding a user with email id " + email)
 
-	var user *models.User
+	var user models.User
 	if err := svc.db.Where("email = ?", email).First(user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			logger.Danger("Unable to find user by email.")
+			return nil, application_types.NewApplicationError(false, http.StatusNotFound, "No user found", fmt.Errorf("No user found for the given email"))
+		}
 		logger.Danger("Unable to find user by email. Message: " + err.Error())
-		return nil, application_types.NewApplicationError(false, http.StatusInternalServerError, fmt.Errorf("Unable to find user by email. Message: "+err.Error()))
+		return nil, application_types.NewApplicationError(false, http.StatusInternalServerError, "User find failed",
+			fmt.Errorf("Unable to find user by email. Message: "+err.Error()))
 	}
 
 	logger.Success("User found by email")
-	return user, nil
+	return &user, nil
 }
 
 func (svc *userService) FindByPhone(phone string) (*models.User, *application_types.ApplicationError) {
 	logger.Info("Finding a user with phone " + phone)
 
-	var user *models.User
+	var user models.User
 	if err := svc.db.Where("phone = ?", phone).First(user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			logger.Danger("Unable to find user by phone number.")
+			return nil, application_types.NewApplicationError(false, http.StatusNotFound, "No user found", fmt.Errorf("No user found for the given phone number"))
+		}
 		logger.Danger("Unable to find user by phone. Message: " + err.Error())
-		return nil, application_types.NewApplicationError(false, http.StatusInternalServerError, fmt.Errorf("Unable to find user by phone. Message: "+err.Error()))
+		return nil, application_types.NewApplicationError(false, http.StatusInternalServerError, "User find failed",
+			fmt.Errorf("Unable to find user by phone. Message: "+err.Error()))
 	}
 
 	logger.Success("User found by phone")
-	return user, nil
+	return &user, nil
 }

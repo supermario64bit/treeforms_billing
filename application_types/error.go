@@ -9,9 +9,10 @@ type ApplicationError struct {
 	err         error
 }
 
-func NewApplicationError(isSuccess bool, httpStatus int, err error) *ApplicationError {
+func NewApplicationError(isSuccess bool, httpStatus int, httpMessage string, err error) *ApplicationError {
 	return &ApplicationError{
 		httpStatus: httpStatus,
+		httpMessage: httpMessage,
 		isSuccess:  isSuccess,
 		err:        err,
 	}
@@ -33,5 +34,5 @@ func (appErr *ApplicationError) WriteHTTPResponse(c *gin.Context) {
 	responseBody["message"] = appErr.httpMessage
 	responseBody["result"] = gin.H{"error": appErr.GetErrorMessage()}
 
-	c.JSON(appErr.httpStatus, gin.H{})
+	c.JSON(appErr.httpStatus, responseBody)
 }
