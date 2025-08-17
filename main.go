@@ -14,7 +14,7 @@ func main() {
 	// Load .env file
 	err := godotenv.Load()
 	if err != nil {
-		logger.Danger("Error while loading .env file. Message: " + err.Error())
+		logger.HighlightedDanger("Error while loading .env file. Message: " + err.Error())
 		return
 	}
 
