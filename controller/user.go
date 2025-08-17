@@ -35,8 +35,7 @@ func (ctlr *userController) Create(c *gin.Context) {
 		return
 	}
 
-	user, appErr := ctlr.svc.Create(&models.User{Name: userDTO.Name, Email: userDTO.Email, Phone: userDTO.Phone,
-		Role: userDTO.Role, Status: userDTO.Status})
+	user, appErr := ctlr.svc.Create(userDTO)
 	if appErr != nil {
 		appErr.WriteHTTPResponse(c)
 		logger.Info("Create user api stopped")
@@ -89,4 +88,34 @@ func (ctrl *userController) FindByID(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "User Found", "result": gin.H{"user": user}})
 	logger.Info("Find user by id api finished")
+}
+
+func (ctrl *userController) UpdateByID(c *gin.Context) {
+	idStr := c.Param("id")
+	logger.Info("API Request for updating a user by ID " + idStr + ".")
+
+	var userDTO *dtos.UserDTO
+	err := c.ShouldBindBodyWithJSON(userDTO)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "failed", "message": "Invalid Request Body", "result": gin.H{"error": err.Error()}})
+		logger.Info("Update user by id api stopped due to request body is invalid")
+		return
+	}
+
+	id, err := strconv.ParseUint(idStr, 10, 0)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "failed", "message": "Invalid User ID", "result": gin.H{"error": err.Error()}})
+		logger.Info("update user by id api stopped")
+		return
+	}
+
+	updateUser, appErr := ctrl.svc.UpdateByID(uint(id), userDTO)
+	if appErr != nil {
+		appErr.WriteHTTPResponse(c)
+		logger.Info("Update user by id api stopped")
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "User Updated", "result": gin.H{"user": updateUser}})
+	logger.Info("Update user by id api finished")
 }
