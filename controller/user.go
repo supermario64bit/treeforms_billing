@@ -17,6 +17,10 @@ type userController struct {
 
 type UserController interface {
 	Create(c *gin.Context)
+	Find(c *gin.Context)
+	FindByID(c *gin.Context)
+	UpdateByID(c *gin.Context)
+	DeleteByID(c *gin.Context)
 }
 
 func NewUserController() UserController {
