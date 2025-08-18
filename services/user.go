@@ -183,7 +183,7 @@ func (svc *userService) UpdateByID(id uint, updatedUserData *dtos.UserDTO) (*mod
 		return nil, appErr
 	}
 	logger.Info("Checking given email is enrolled by any other user")
-	if err := svc.db.Where("email =?", updatedUser.Email).First(&models.User{}).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+	if err := svc.db.Where("email = ? AND id <> ?", updatedUser.Email, id).First(&models.User{}).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		logger.Danger("Error occured while checking the user email enrolled by any other user")
 		return nil, application_types.NewApplicationError(false, http.StatusUnprocessableEntity, "User update failed", fmt.Errorf("Unable to find user by email. Message: "+err.Error()))
 	} else if err == nil {
@@ -192,7 +192,7 @@ func (svc *userService) UpdateByID(id uint, updatedUserData *dtos.UserDTO) (*mod
 	}
 
 	logger.Info("Checking given phone is enrolled by any other user")
-	if err := svc.db.Where("phone =?", updatedUser.Phone).First(&models.User{}).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+	if err := svc.db.Where("phone = ? AND id <> ?", updatedUser.Phone, id).First(&models.User{}).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		logger.Danger("Error occured while checking the user phone enrolled by any other user")
 		return nil, application_types.NewApplicationError(false, http.StatusUnprocessableEntity, "User update failed", fmt.Errorf("Unable to find user by phone. Message: "+err.Error()))
 	} else if err == nil {
