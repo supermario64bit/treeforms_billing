@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"treeforms_billing/application_types"
 	"treeforms_billing/auth"
+	"treeforms_billing/db"
 	"treeforms_billing/logger"
 
 	"gorm.io/gorm"
@@ -19,6 +20,12 @@ type PasswordService interface {
 	Create(userID uint, plainPassword string) *application_types.ApplicationError
 	ChangePassword(userID uint, currentPassword, newPlainPassword string) *application_types.ApplicationError
 	ChangePasswordWithoutConfirmingCurrentPassword(userID uint, plainPassword string) *application_types.ApplicationError
+}
+
+func NewPasswordService() PasswordService {
+	return &passwordService{
+		db: db.Get(),
+	}
 }
 
 func (svc *passwordService) Create(userID uint, plainPassword string) *application_types.ApplicationError {
