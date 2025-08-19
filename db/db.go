@@ -33,4 +33,15 @@ func Automigrate() {
 	db.AutoMigrate(
 		models.User{},
 	)
+
+	passwordsTableCreateQuery := `
+	CREATE TABLE IF NOT EXISTS passwords (
+	    id BIGSERIAL PRIMARY KEY,
+	    hash TEXT NOT NULL,
+	    user_id BIGINT UNIQUE NOT NULL
+	);`
+
+	if err := db.Exec(passwordsTableCreateQuery).Error; err != nil {
+		logger.HighlightedDanger("failed to run migration:" + err.Error())
+	}
 }
