@@ -39,7 +39,7 @@ func NewPassword(userID uint, plainPassword string) (*password, error) {
 	return password, nil
 }
 
-func GetPasswordByUserID(userID int) (*password, error) {
+func GetPasswordByUserID(userID uint) (*password, error) {
 	var p *password
 	db := db.Get()
 
