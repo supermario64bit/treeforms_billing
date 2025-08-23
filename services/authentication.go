@@ -48,6 +48,11 @@ func (svc *authenticationService) EmailLogin(emailID string, passwordStr string)
 		return application_types.NewApplicationError(false, http.StatusInternalServerError, "Login using email failed", err)
 	}
 
+	if password == nil {
+		logger.HighlightedDanger("Password not created for the user")
+		return application_types.NewApplicationError(false, http.StatusInternalServerError, "Login using email failed", fmt.Errorf("Password not created for the user"))
+	}
+
 	if !password.VerifyPassword(passwordStr) {
 		logger.Info("Stopping Email login service. Message: Invalid password")
 		return application_types.NewApplicationError(false, http.StatusUnauthorized, "Login using email failed", fmt.Errorf("Invalid Credentials"))
@@ -94,7 +99,8 @@ func (svc *authenticationService) Signup(signup dtos.SignupDTO) *application_typ
 		}
 
 		passwordInsertQuery := `INSERT INTO passwords (hash, user_id) VALUES (?, ?);`
-		if err := tx.Raw(passwordInsertQuery, string(hashedPass), user.ID).Error; err != nil {
+		logger.Info("Executing query: " + passwordInsertQuery)
+		if err := tx.Exec(passwordInsertQuery, string(hashedPass), user.ID).Error; err != nil {
 			logger.HighlightedDanger("Password creation failed. Gorm Message: " + err.Error())
 			return err
 		}

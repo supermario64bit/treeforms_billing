@@ -45,14 +45,14 @@ func (ctrl *authenticatioController) Signup(c *gin.Context) {
 
 func (ctrl *authenticatioController) EmailLogin(c *gin.Context) {
 	logger.Info("API Request for Email Login")
-	var signDto dtos.SignupDTO
-	if err := c.ShouldBindBodyWithJSON(&signDto); err != nil {
+	var loginDto dtos.LoginDTO
+	if err := c.ShouldBindBodyWithJSON(&loginDto); err != nil {
 		logger.Danger("Invalid Payload. Message: " + err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{"status": "failed", "message": "Unable to read request body!", "result": gin.H{"error": err.Error()}})
 		return
 	}
 
-	if appErr := ctrl.authSvc.Signup(signDto); appErr != nil {
+	if appErr := ctrl.authSvc.EmailLogin(loginDto.Email, loginDto.Password); appErr != nil {
 		logger.Danger("API Request for Email Login Stopped")
 		appErr.WriteHTTPResponse(c)
 		return

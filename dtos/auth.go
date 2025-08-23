@@ -7,3 +7,8 @@ type SignupDTO struct {
 	Password        string `json:"password"`
 	ConfirmPassword string `json:"confirm_password"`
 }
+
+type LoginDTO struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}

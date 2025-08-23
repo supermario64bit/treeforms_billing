@@ -40,7 +40,7 @@ func NewPassword(userID uint, plainPassword string) (*password, error) {
 }
 
 func GetPasswordByUserID(userID uint) (*password, error) {
-	var p *password
+	var p= &password{}
 	db := db.Get()
 
 	selectQuery := `SELECT id, hash, user_id FROM passwords WHERE user_id = ?`
@@ -63,7 +63,8 @@ func GetPasswordByUserID(userID uint) (*password, error) {
 }
 
 func (p *password) VerifyPassword(password string) bool {
-	return bcrypt.CompareHashAndPassword([]byte(p.hash), []byte(password)) == nil
+	err := bcrypt.CompareHashAndPassword([]byte(p.hash), []byte(password))
+	return err == nil
 }
 
 func (p *password) GetUserID() uint {
