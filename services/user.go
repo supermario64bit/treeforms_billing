@@ -234,10 +234,10 @@ func (svc *userService) FindByEmail(email string) (*models.User, *application_ty
 	logger.Info("Finding a user with email id " + email)
 
 	var user models.User
-	if err := svc.db.Where("email = ?", email).First(user).Error; err != nil {
+	if err := svc.db.Where("email = ?", email).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			logger.Danger("Unable to find user by email.")
-			return nil, application_types.NewApplicationError(false, http.StatusNotFound, "No user found", fmt.Errorf("No user found for the given email"))
+			return nil, application_types.NewApplicationError(false, http.StatusNotFound, "No user found for the given email", err)
 		}
 		logger.Danger("Unable to find user by email. Message: " + err.Error())
 		return nil, application_types.NewApplicationError(false, http.StatusInternalServerError, "User find failed",

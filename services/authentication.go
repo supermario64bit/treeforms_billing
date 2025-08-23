@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"treeforms_billing/application_types"
@@ -69,6 +70,15 @@ func (svc *authenticationService) Signup(signup dtos.SignupDTO) *application_typ
 		Phone:  signup.Phone,
 		Role:   "user",
 		Status: "active",
+	}
+
+	u, appErr := svc.userSvc.FindByEmail(user.Email)
+	if appErr != nil && !errors.Is(appErr.GetError(), gorm.ErrRecordNotFound) {
+		logger.Danger("User signup service stopped")
+		return appErr
+	} else if u != nil {
+		logger.Warning("User signup service stopped. Message: Email already registered with another user.")
+		return application_types.NewApplicationError(false, http.StatusUnprocessableEntity, "Signup failed.", fmt.Errorf("Email already registered with another user."))
 	}
 
 	hashedPass, err := bcrypt.GenerateFromPassword([]byte(signup.ConfirmPassword), bcrypt.DefaultCost)
