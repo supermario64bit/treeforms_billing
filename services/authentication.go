@@ -22,7 +22,7 @@ type authenticationService struct {
 }
 
 type AuthenticationService interface {
-	EmailLogin(emailID string, passwordStr string) *application_types.ApplicationError
+	EmailLogin(emailID string, passwordStr string) (access_token string, appErr *application_types.ApplicationError)
 	Signup(signup dtos.SignupDTO) *application_types.ApplicationError
 }
 
@@ -34,32 +34,37 @@ func NewAuthenticationSevice() AuthenticationService {
 	}
 }
 
-func (svc *authenticationService) EmailLogin(emailID string, passwordStr string) *application_types.ApplicationError {
+func (svc *authenticationService) EmailLogin(emailID string, passwordStr string) (access_token string, appErr *application_types.ApplicationError) {
 	logger.Info("Email login Service Started")
 	user, appErr := svc.userSvc.FindByEmail(emailID)
 	if appErr != nil {
 		logger.Danger("Stopping Email login service.")
-		return appErr
+		return
 	}
 
 	password, err := auth.GetPasswordByUserID(user.ID)
 	if err != nil {
 		logger.HighlightedDanger("Stopping Email login service.")
-		return application_types.NewApplicationError(false, http.StatusInternalServerError, "Login using email failed", err)
+		return "", application_types.NewApplicationError(false, http.StatusInternalServerError, "Login using email failed", err)
 	}
 
 	if password == nil {
 		logger.HighlightedDanger("Password not created for the user")
-		return application_types.NewApplicationError(false, http.StatusInternalServerError, "Login using email failed", fmt.Errorf("Password not created for the user"))
+		return "", application_types.NewApplicationError(false, http.StatusInternalServerError, "Login using email failed", fmt.Errorf("Password not created for the user"))
 	}
 
 	if !password.VerifyPassword(passwordStr) {
 		logger.Info("Stopping Email login service. Message: Invalid password")
-		return application_types.NewApplicationError(false, http.StatusUnauthorized, "Login using email failed", fmt.Errorf("Invalid Credentials"))
+		return "", application_types.NewApplicationError(false, http.StatusUnauthorized, "Login using email failed", fmt.Errorf("Invalid Credentials"))
 	}
 
 	logger.Success("Email login is success")
-	return nil
+	tokenStr, err := user.NewAccessToken()
+	if err != nil {
+		logger.HighlightedDanger("Error occured while signing access token")
+		return "", application_types.NewApplicationError(false, http.StatusInternalServerError, "Access Token Signing Failed", err)
+	}
+	return tokenStr, nil
 }
 
 func (svc *authenticationService) Signup(signup dtos.SignupDTO) *application_types.ApplicationError {
@@ -114,4 +119,21 @@ func (svc *authenticationService) Signup(signup dtos.SignupDTO) *application_typ
 
 	logger.Success("User Signup Service Success")
 	return nil
+}
+
+func (svc *authenticationService) NewAccessToken(userID uint) (string, *application_types.ApplicationError) {
+	logger.Info("Started New Access Token Service")
+	user, appErr := svc.userSvc.FindByID(userID)
+	if appErr != nil {
+		logger.Danger("New Access Token Service stopped")
+		return "", appErr
+	}
+
+	tokenStr, err := user.NewAccessToken()
+	if err != nil {
+		logger.HighlightedDanger("Error occured while signing access token")
+		return "", application_types.NewApplicationError(false, http.StatusInternalServerError, "Access Token Signing Failed", err)
+	}
+
+	return tokenStr, nil
 }

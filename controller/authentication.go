@@ -52,12 +52,13 @@ func (ctrl *authenticatioController) EmailLogin(c *gin.Context) {
 		return
 	}
 
-	if appErr := ctrl.authSvc.EmailLogin(loginDto.Email, loginDto.Password); appErr != nil {
+	accessToken, appErr := ctrl.authSvc.EmailLogin(loginDto.Email, loginDto.Password)
+	if appErr != nil {
 		logger.Danger("API Request for Email Login Stopped")
 		appErr.WriteHTTPResponse(c)
 		return
 	}
 
 	logger.Success("API Request for Email Login success.")
-	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Login is successfull."})
+	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Login is successfull.", "result": gin.H{"access_token": accessToken}})
 }
