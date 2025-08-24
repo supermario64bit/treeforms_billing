@@ -1,10 +1,16 @@
 package routes
 
-import "github.com/gin-gonic/gin"
+import (
+	"treeforms_billing/middlewares"
+
+	"github.com/gin-gonic/gin"
+)
 
 func MountHTTPRoutes(r *gin.Engine) {
+	authenticationMiddleware := middlewares.NewAuthenticationMiddleware()
 	api := r.Group("/api/v1")
+	apiProtected := r.Group("/api/v1", authenticationMiddleware.ValidateAccessToken)
 
-	mountUserRoutes(api)
+	mountUserRoutes(apiProtected)
 	mountAuthenticationRoutes(api)
 }
