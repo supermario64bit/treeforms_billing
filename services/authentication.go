@@ -25,8 +25,9 @@ type authenticationService struct {
 }
 
 type AuthenticationService interface {
-	EmailLogin(emailID string, passwordStr string) (access_token, refresh_token string, appErr *application_types.ApplicationError)
+	EmailLogin(emailID string, passwordStr string) (access_token, refresh_token string, sub uint, appErr *application_types.ApplicationError)
 	Signup(signup dtos.SignupDTO) *application_types.ApplicationError
+	RotateRefreshTokenWithNewAccessToken(refreshToken string, userID uint) (access_token, refresh_token string, appErr *application_types.ApplicationError)
 }
 
 func NewAuthenticationSevice() AuthenticationService {
@@ -37,7 +38,7 @@ func NewAuthenticationSevice() AuthenticationService {
 	}
 }
 
-func (svc *authenticationService) EmailLogin(emailID string, passwordStr string) (access_token, refresh_token string, appErr *application_types.ApplicationError) {
+func (svc *authenticationService) EmailLogin(emailID string, passwordStr string) (access_token, refresh_token string, sub uint, appErr *application_types.ApplicationError) {
 	logger.Info("Email login Service Started")
 	user, appErr := svc.userSvc.FindByEmail(emailID)
 	if appErr != nil {
@@ -48,34 +49,34 @@ func (svc *authenticationService) EmailLogin(emailID string, passwordStr string)
 	password, err := auth.GetPasswordByUserID(user.ID)
 	if err != nil {
 		logger.HighlightedDanger("Stopping Email login service.")
-		return "", "", application_types.NewApplicationError(false, http.StatusInternalServerError, "Login using email failed", err)
+		return "", "", 0, application_types.NewApplicationError(false, http.StatusInternalServerError, "Login using email failed", err)
 	}
 
 	if password == nil {
 		logger.HighlightedDanger("Password not created for the user")
-		return "", "", application_types.NewApplicationError(false, http.StatusInternalServerError, "Login using email failed", fmt.Errorf("Password not created for the user"))
+		return "", "", 0, application_types.NewApplicationError(false, http.StatusInternalServerError, "Login using email failed", fmt.Errorf("Password not created for the user"))
 	}
 
 	if !password.VerifyPassword(passwordStr) {
 		logger.Info("Stopping Email login service. Message: Invalid password")
-		return "", "", application_types.NewApplicationError(false, http.StatusUnauthorized, "Login using email failed", fmt.Errorf("Invalid Credentials"))
+		return "", "", 0, application_types.NewApplicationError(false, http.StatusUnauthorized, "Login using email failed", fmt.Errorf("Invalid Credentials"))
 	}
 
 	logger.Success("Email login is success")
 	tokenStr, err := user.NewAccessToken()
 	if err != nil {
 		logger.HighlightedDanger("Error occured while signing access token")
-		return "", "", application_types.NewApplicationError(false, http.StatusInternalServerError, "Access Token Signing Failed", err)
+		return "", "", 0, application_types.NewApplicationError(false, http.StatusInternalServerError, "Access Token Signing Failed", err)
 	}
 
 	refresh_token, appErr = svc.NewRefreshToken(user.ID)
 	if appErr != nil {
 		logger.HighlightedDanger("Error occured while generation refresh token")
-		return "", "", application_types.NewApplicationError(false, http.StatusInternalServerError, "Refresh Token Generation Failed", err)
+		return "", "", 0, application_types.NewApplicationError(false, http.StatusInternalServerError, "Refresh Token Generation Failed", err)
 	}
 
 	logger.Success("Email login success")
-	return tokenStr, refresh_token, nil
+	return tokenStr, refresh_token, user.ID, nil
 }
 
 func (svc *authenticationService) Signup(signup dtos.SignupDTO) *application_types.ApplicationError {
@@ -180,4 +181,60 @@ func (svc *authenticationService) NewRefreshToken(userID uint) (string, *applica
 
 	logger.Success("New Refresh Token Service Success")
 	return tokenStr, nil
+}
+
+func (svc *authenticationService) RotateRefreshTokenWithNewAccessToken(refreshToken string, userID uint) (access_token, refresh_token string, appErr *application_types.ApplicationError) {
+	logger.Info("Rotate Refresh Token With New Access Token Service Started")
+	user, appErr := svc.userSvc.FindByID(userID)
+	if appErr != nil {
+		logger.Danger("Rotate Refresh Token With New Access Token Service Stopped")
+		return
+	}
+
+	access_token, err := user.NewAccessToken()
+	if err != nil {
+		logger.HighlightedDanger("Error occured while signing access token")
+		logger.Danger("Rotate Refresh Token With New Access Token Service Stopped")
+		appErr = application_types.NewApplicationError(false, http.StatusInternalServerError, "Access Token Signing Failed", err)
+		return
+	}
+
+	var rt models.RefreshToken
+	if err := svc.db.Where("user_id = ?", user.ID).Last(&rt).Error; err != nil {
+		logger.Warning("Invalid refresh token. Gorm Message: " + err.Error())
+		logger.Danger("Rotate Refresh Token With New Access Token Service Stopped")
+		appErr = application_types.NewApplicationError(false, http.StatusUnauthorized, "Invalid Refresh Token", err)
+
+		return "", "", appErr
+	}
+
+	if rt.ExpiresAt.After(time.Now()) {
+		logger.Warning("Expired refresh token.")
+		logger.Danger("Rotate Refresh Token With New Access Token Service Stopped")
+		appErr = application_types.NewApplicationError(false, http.StatusUnauthorized, "Expired refresh token", fmt.Errorf("Your refresh token is expired"))
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(rt.TokenHash), []byte(refreshToken)); err != nil {
+		fmt.Println("refresh token: " + refreshToken)
+		logger.Warning("Invalid refresh token while comparing the hash.")
+		logger.Danger("Rotate Refresh Token With New Access Token Service Stopped")
+		appErr = application_types.NewApplicationError(false, http.StatusUnauthorized, "Invalid Refresh Token", err)
+		return "", "", appErr
+	}
+
+	if err := svc.db.Delete(&rt).Error; err != nil {
+		logger.Warning("Unable to delete existing refresh token")
+		logger.Danger("Rotate Refresh Token With New Access Token Service Stopped")
+		appErr = application_types.NewApplicationError(false, http.StatusUnauthorized, "Unable to delete existing refresh token. Gorm Message: "+err.Error(), err)
+		return "", "", appErr
+	}
+
+	refresh_token, appErr = svc.NewRefreshToken(user.ID)
+	if appErr != nil {
+		logger.HighlightedDanger("Error occured while generation refresh token")
+		return "", "", application_types.NewApplicationError(false, http.StatusInternalServerError, "Refresh Token Generation Failed", err)
+	}
+
+	return
 }

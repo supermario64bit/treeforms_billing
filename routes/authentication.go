@@ -12,4 +12,5 @@ func mountAuthenticationRoutes(r *gin.RouterGroup) {
 	ctrl := controller.NewAuthenticationController()
 	authenticationRoutes.POST("/signup", ctrl.Signup)
 	authenticationRoutes.POST("/login/email", ctrl.EmailLogin)
+	authenticationRoutes.POST("/refresh-token", ctrl.RotateRefreshTokenWithNewAccessToken)
 }

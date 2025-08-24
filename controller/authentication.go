@@ -16,6 +16,7 @@ type authenticatioController struct {
 type AuthenticatioController interface {
 	Signup(c *gin.Context)
 	EmailLogin(c *gin.Context)
+	RotateRefreshTokenWithNewAccessToken(c *gin.Context)
 }
 
 func NewAuthenticationController() AuthenticatioController {
@@ -52,7 +53,7 @@ func (ctrl *authenticatioController) EmailLogin(c *gin.Context) {
 		return
 	}
 
-	accessToken, refresh_token, appErr := ctrl.authSvc.EmailLogin(loginDto.Email, loginDto.Password)
+	accessToken, refresh_token, sub, appErr := ctrl.authSvc.EmailLogin(loginDto.Email, loginDto.Password)
 	if appErr != nil {
 		logger.Danger("API Request for Email Login Stopped")
 		appErr.WriteHTTPResponse(c)
@@ -60,5 +61,25 @@ func (ctrl *authenticatioController) EmailLogin(c *gin.Context) {
 	}
 
 	logger.Success("API Request for Email Login success.")
-	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Login is successfull.", "result": gin.H{"access_token": accessToken, "refresh_token": refresh_token}})
+	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Login is successfull.", "result": gin.H{"access_token": accessToken,
+		"refresh_token": refresh_token, "sub": sub}})
+}
+
+func (ctrl *authenticatioController) RotateRefreshTokenWithNewAccessToken(c *gin.Context) {
+	var refreshTokenDto dtos.RotateRefreshTokenDTO
+	if err := c.ShouldBindBodyWithJSON(&refreshTokenDto); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "failed", "message": "Invalid Request Body", "result": gin.H{"error": err.Error()}})
+		return
+	}
+
+	accessToken, refreshToken, appErr := ctrl.authSvc.RotateRefreshTokenWithNewAccessToken(refreshTokenDto.RefreshToken, refreshTokenDto.UserID)
+	if appErr != nil {
+		appErr.WriteHTTPResponse(c)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "New accesstoken and refresh token available", "result": gin.H{
+		"refresh_token": refreshToken,
+		"access_token":  accessToken,
+	}})
 }

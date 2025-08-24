@@ -12,3 +12,8 @@ type LoginDTO struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
+
+type RotateRefreshTokenDTO struct {
+	RefreshToken string `json:"refresh_token"`
+	UserID       uint   `json:"user_id"`
+}

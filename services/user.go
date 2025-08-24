@@ -132,7 +132,7 @@ func (svc *userService) FindByID(id uint) (*models.User, *application_types.Appl
 	if err := svc.db.First(user, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			logger.Danger("No user found for the id " + strconv.FormatUint(uint64(id), 10))
-			return nil, application_types.NewApplicationError(false, http.StatusNotFound, "No user found", fmt.Errorf("No user found for the given id"))
+			return nil, application_types.NewApplicationError(false, http.StatusNotFound, "No user found for the given id", err)
 
 		}
 		logger.Danger("Unable to find user by id. Message: " + err.Error())
