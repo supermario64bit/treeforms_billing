@@ -32,6 +32,7 @@ func Automigrate() {
 	}
 	db.AutoMigrate(
 		models.User{},
+		models.RefreshToken{},
 	)
 
 	passwordsTableCreateQuery := `

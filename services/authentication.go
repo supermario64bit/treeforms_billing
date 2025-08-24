@@ -1,9 +1,12 @@
 package services
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 	"treeforms_billing/application_types"
 	"treeforms_billing/auth"
 	"treeforms_billing/db"
@@ -22,7 +25,7 @@ type authenticationService struct {
 }
 
 type AuthenticationService interface {
-	EmailLogin(emailID string, passwordStr string) (access_token string, appErr *application_types.ApplicationError)
+	EmailLogin(emailID string, passwordStr string) (access_token, refresh_token string, appErr *application_types.ApplicationError)
 	Signup(signup dtos.SignupDTO) *application_types.ApplicationError
 }
 
@@ -34,7 +37,7 @@ func NewAuthenticationSevice() AuthenticationService {
 	}
 }
 
-func (svc *authenticationService) EmailLogin(emailID string, passwordStr string) (access_token string, appErr *application_types.ApplicationError) {
+func (svc *authenticationService) EmailLogin(emailID string, passwordStr string) (access_token, refresh_token string, appErr *application_types.ApplicationError) {
 	logger.Info("Email login Service Started")
 	user, appErr := svc.userSvc.FindByEmail(emailID)
 	if appErr != nil {
@@ -45,26 +48,32 @@ func (svc *authenticationService) EmailLogin(emailID string, passwordStr string)
 	password, err := auth.GetPasswordByUserID(user.ID)
 	if err != nil {
 		logger.HighlightedDanger("Stopping Email login service.")
-		return "", application_types.NewApplicationError(false, http.StatusInternalServerError, "Login using email failed", err)
+		return "", "", application_types.NewApplicationError(false, http.StatusInternalServerError, "Login using email failed", err)
 	}
 
 	if password == nil {
 		logger.HighlightedDanger("Password not created for the user")
-		return "", application_types.NewApplicationError(false, http.StatusInternalServerError, "Login using email failed", fmt.Errorf("Password not created for the user"))
+		return "", "", application_types.NewApplicationError(false, http.StatusInternalServerError, "Login using email failed", fmt.Errorf("Password not created for the user"))
 	}
 
 	if !password.VerifyPassword(passwordStr) {
 		logger.Info("Stopping Email login service. Message: Invalid password")
-		return "", application_types.NewApplicationError(false, http.StatusUnauthorized, "Login using email failed", fmt.Errorf("Invalid Credentials"))
+		return "", "", application_types.NewApplicationError(false, http.StatusUnauthorized, "Login using email failed", fmt.Errorf("Invalid Credentials"))
 	}
 
 	logger.Success("Email login is success")
 	tokenStr, err := user.NewAccessToken()
 	if err != nil {
 		logger.HighlightedDanger("Error occured while signing access token")
-		return "", application_types.NewApplicationError(false, http.StatusInternalServerError, "Access Token Signing Failed", err)
+		return "", "", application_types.NewApplicationError(false, http.StatusInternalServerError, "Access Token Signing Failed", err)
 	}
-	return tokenStr, nil
+
+	refresh_token, appErr = svc.NewRefreshToken(user.ID)
+	if appErr != nil {
+		logger.HighlightedDanger("Error occured while generation refresh token")
+		return "", "", application_types.NewApplicationError(false, http.StatusInternalServerError, "Refresh Token Generation Failed", err)
+	}
+	return tokenStr, refresh_token, nil
 }
 
 func (svc *authenticationService) Signup(signup dtos.SignupDTO) *application_types.ApplicationError {
@@ -133,6 +142,37 @@ func (svc *authenticationService) NewAccessToken(userID uint) (string, *applicat
 	if err != nil {
 		logger.HighlightedDanger("Error occured while signing access token")
 		return "", application_types.NewApplicationError(false, http.StatusInternalServerError, "Access Token Signing Failed", err)
+	}
+
+	return tokenStr, nil
+}
+
+func (svc *authenticationService) NewRefreshToken(userID uint) (string, *application_types.ApplicationError) {
+	logger.Info("Started New Refresh Token Service")
+	user, appErr := svc.userSvc.FindByID(userID)
+	if appErr != nil {
+		logger.Danger("New Refresh Token Service stopped")
+		return "", appErr
+	}
+
+	bytes := make([]byte, 35)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		logger.HighlightedDanger("Error occured while generating refresh token")
+		return "", application_types.NewApplicationError(false, http.StatusInternalServerError, "Access Refresh Signing Failed", err)
+	}
+
+	tokenStr := base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(bytes)
+	tokenHash, err := bcrypt.GenerateFromPassword([]byte(tokenStr), bcrypt.DefaultCost)
+	if err != nil {
+		logger.HighlightedDanger("Error occured while hashing refresh token")
+		return "", application_types.NewApplicationError(false, http.StatusInternalServerError, "Access Refresh Signing Failed", err)
+	}
+
+	if err := svc.db.Create(&models.RefreshToken{UserID: user.ID, TokenHash: string(tokenHash), ExpiresAt: time.Now().Add(7 * (24 * time.Hour))}).Error; err != nil {
+		logger.HighlightedDanger("Error occured while generating refresh token. Gorm Message: " + err.Error())
+		return "", application_types.NewApplicationError(false, http.StatusInternalServerError, "Access Refresh Signing Failed.", err)
+
 	}
 
 	return tokenStr, nil

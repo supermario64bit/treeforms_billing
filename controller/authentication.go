@@ -52,7 +52,7 @@ func (ctrl *authenticatioController) EmailLogin(c *gin.Context) {
 		return
 	}
 
-	accessToken, appErr := ctrl.authSvc.EmailLogin(loginDto.Email, loginDto.Password)
+	accessToken, refresh_token, appErr := ctrl.authSvc.EmailLogin(loginDto.Email, loginDto.Password)
 	if appErr != nil {
 		logger.Danger("API Request for Email Login Stopped")
 		appErr.WriteHTTPResponse(c)
@@ -60,5 +60,5 @@ func (ctrl *authenticatioController) EmailLogin(c *gin.Context) {
 	}
 
 	logger.Success("API Request for Email Login success.")
-	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Login is successfull.", "result": gin.H{"access_token": accessToken}})
+	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Login is successfull.", "result": gin.H{"access_token": accessToken, "refresh_token": refresh_token}})
 }
