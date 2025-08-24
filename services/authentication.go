@@ -208,7 +208,7 @@ func (svc *authenticationService) RotateRefreshTokenWithNewAccessToken(refreshTo
 		return "", "", appErr
 	}
 
-	if rt.ExpiresAt.After(time.Now()) {
+	if rt.ExpiresAt.Before(time.Now()) {
 		logger.Warning("Expired refresh token.")
 		logger.Danger("Rotate Refresh Token With New Access Token Service Stopped")
 		appErr = application_types.NewApplicationError(false, http.StatusUnauthorized, "Expired refresh token", fmt.Errorf("Your refresh token is expired"))
