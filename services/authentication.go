@@ -73,6 +73,8 @@ func (svc *authenticationService) EmailLogin(emailID string, passwordStr string)
 		logger.HighlightedDanger("Error occured while generation refresh token")
 		return "", "", application_types.NewApplicationError(false, http.StatusInternalServerError, "Refresh Token Generation Failed", err)
 	}
+
+	logger.Success("Email login success")
 	return tokenStr, refresh_token, nil
 }
 
@@ -144,6 +146,7 @@ func (svc *authenticationService) NewAccessToken(userID uint) (string, *applicat
 		return "", application_types.NewApplicationError(false, http.StatusInternalServerError, "Access Token Signing Failed", err)
 	}
 
+	logger.Success("New Access Token Service Success")
 	return tokenStr, nil
 }
 
@@ -175,5 +178,6 @@ func (svc *authenticationService) NewRefreshToken(userID uint) (string, *applica
 
 	}
 
+	logger.Success("New Refresh Token Service Success")
 	return tokenStr, nil
 }
